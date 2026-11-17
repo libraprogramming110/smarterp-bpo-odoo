@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Placeholder tab. Replace with the real Agent Attrition fields when the feature ships. -->
+    <record id="view_employee_form_smarterp" model="ir.ui.view">
+        <field name="name">hr.employee.form.smarterp</field>
+        <field name="model">hr.employee</field>
+        <field name="inherit_id" ref="hr.view_employee_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook" position="inside">
+                <page string="SmartERP" name="smarterp">
+                    <div class="alert alert-info" role="status">
+                        <strong>Agent Attrition</strong> will appear here. Target date: Nov 24, 2026.
+                    </div>
+                </page>
+            </xpath>
+        </field>
+    </record>
+</odoo>

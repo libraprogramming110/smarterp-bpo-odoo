@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <menuitem id="menu_smarterp_root" name="SmartERP" sequence="10"/>
+
+    <menuitem id="menu_lead_scoring" name="Lead Scoring" parent="menu_smarterp_root"
+              action="action_placeholder_lead_scoring" sequence="10"/>
+    <menuitem id="menu_churn_prediction" name="Churn Prediction" parent="menu_smarterp_root"
+              action="action_placeholder_churn_prediction" sequence="20"/>
+    <menuitem id="menu_workforce" name="Workforce Forecasting &amp; Scheduling" parent="menu_smarterp_root"
+              action="action_placeholder_workforce" sequence="30"/>
+    <menuitem id="menu_quality_assurance" name="Quality Assurance (AI)" parent="menu_smarterp_root"
+              action="action_placeholder_quality_assurance" sequence="40"/>
+    <menuitem id="menu_agent_attrition" name="Agent Attrition" parent="menu_smarterp_root"
+              action="action_placeholder_agent_attrition" sequence="50"/>
+</odoo>

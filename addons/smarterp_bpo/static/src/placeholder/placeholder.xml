@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<templates xml:space="preserve">
+
+    <t t-name="smarterp_bpo.Placeholder">
+        <div class="o_action p-5">
+            <h2 class="fw-bold mb-3" t-esc="this.info.name"/>
+            <div class="alert alert-info" role="status">Coming soon. This is a placeholder.</div>
+            <p><strong>What it will do: </strong><t t-esc="this.info.what"/></p>
+            <p><strong>Where it will appear: </strong><t t-esc="this.info.where"/></p>
+            <p><strong>Target date: </strong><t t-esc="this.info.date"/></p>
+        </div>
+    </t>
+
+</templates>

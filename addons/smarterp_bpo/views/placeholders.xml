@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Placeholder pages, one per planned feature. Replace each record with the real feature's action. -->
+    <record id="action_placeholder_lead_scoring" model="ir.actions.client">
+        <field name="name">Lead Scoring</field>
+        <field name="tag">smarterp_bpo.placeholder</field>
+        <field name="params" eval="{'what': 'Scores each CRM lead and labels it Hot, Warm or Cold, with an AI-written reason.', 'where': 'CRM leads and opportunities (SmartERP tab on the lead form).', 'date': 'Nov 19, 2026'}"/>
+    </record>
+
+    <record id="action_placeholder_churn_prediction" model="ir.actions.client">
+        <field name="name">Churn Prediction</field>
+        <field name="tag">smarterp_bpo.placeholder</field>
+        <field name="params" eval="{'what': 'Estimates churn risk from AI sentiment of customer messages plus payment history.', 'where': 'Companies in Contacts (SmartERP tab on the contact form).', 'date': 'Nov 20, 2026'}"/>
+    </record>
+
+    <record id="action_placeholder_workforce" model="ir.actions.client">
+        <field name="name">Workforce Forecasting &amp; Scheduling</field>
+        <field name="tag">smarterp_bpo.placeholder</field>
+        <field name="params" eval="{'what': 'Forecasts call volume, works out staffing need and shows a basic shift grid.', 'where': 'This SmartERP menu.', 'date': 'Nov 22-23, 2026'}"/>
+    </record>
+
+    <record id="action_placeholder_quality_assurance" model="ir.actions.client">
+        <field name="name">Quality Assurance (AI)</field>
+        <field name="tag">smarterp_bpo.placeholder</field>
+        <field name="params" eval="{'what': 'AI grades call transcripts against a QA rubric.', 'where': 'This SmartERP menu.', 'date': 'Nov 21, 2026'}"/>
+    </record>
+
+    <record id="action_placeholder_agent_attrition" model="ir.actions.client">
+        <field name="name">Agent Attrition</field>
+        <field name="tag">smarterp_bpo.placeholder</field>
+        <field name="params" eval="{'what': 'Attrition risk score per agent, with what-if inputs.', 'where': 'Employees (SmartERP tab on the employee form).', 'date': 'Nov 24, 2026'}"/>
+    </record>
+</odoo>

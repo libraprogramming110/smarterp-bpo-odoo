@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Placeholder tab. Replace with the real Churn Prediction fields when the feature ships. -->
+    <record id="view_partner_form_smarterp" model="ir.ui.view">
+        <field name="name">res.partner.form.smarterp</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook" position="inside">
+                <page string="SmartERP" name="smarterp">
+                    <div class="alert alert-info" role="status">
+                        <strong>Churn Prediction</strong> will appear here. Target date: Nov 20, 2026.
+                    </div>
+                </page>
+            </xpath>
+        </field>
+    </record>
+</odoo>
