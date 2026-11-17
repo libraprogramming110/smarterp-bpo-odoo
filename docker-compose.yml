@@ -1,0 +1,28 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+
+  odoo:
+    image: odoo:20.0
+    depends_on:
+      - db
+    ports:
+      - "8069:8069"
+    environment:
+      HOST: db
+      USER: ${POSTGRES_USER}
+      PASSWORD: ${POSTGRES_PASSWORD}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+    volumes:
+      - odoo-data:/var/lib/odoo
+      - ./addons:/mnt/extra-addons
+
+volumes:
+  db-data:
+  odoo-data:
