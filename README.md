@@ -32,6 +32,15 @@ docker compose restart odoo
 
 If you added a new Python file or changed `__manifest__.py`, this is required. For a quick restart only: `docker compose restart odoo`.
 
+## Running tests
+
+```powershell
+docker compose run --rm odoo odoo -d smarterp -u smarterp_bpo --test-tags /smarterp_bpo --stop-after-init
+docker compose restart odoo
+```
+
+Tests live in `addons/smarterp_bpo/tests/` and never call Gemini (it is mocked). Look for `0 failed, 0 error(s) of N tests` near the end of the output. Run it from PowerShell: Git Bash rewrites `/smarterp_bpo` into a Windows path.
+
 ## Logs
 
 ```powershell
