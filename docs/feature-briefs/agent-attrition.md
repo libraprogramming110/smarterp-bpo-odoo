@@ -1,5 +1,8 @@
 # Feature brief: Agent Attrition Prediction
 
+> **Updated Nov 24:** tenure now uses risk bands (section 4), one new input "months since last
+> raise" (section 4), one new test (section 6), and keep the field names stable.
+
 **Owner:** Failah Maomin · **Reviewer:** Nel · **Due:** Wed Nov 26, 11:59 PM (Pull Request opened)
 
 ## 1. What it is
@@ -51,22 +54,37 @@ Stuck on setup for more than 30 minutes? Message Nel right away rather than losi
 | `smarterp_performance` | Selection 1–5 | Last performance rating |
 | `smarterp_overtime_hours` | Integer | Overtime hours per month |
 | `smarterp_satisfaction` | Selection 1–5 | Last satisfaction survey score |
+| `smarterp_months_since_raise` | Integer | Months since the last raise or promotion |
 | `smarterp_risk_score` | Integer, **stored compute** | 0–100 |
 | `smarterp_risk_level` | Selection, **stored compute** | Low / Medium / High |
 
 ### Scoring
 
-- One readable dict of weights that add up to 100, e.g. short tenure, many absences, low
-  performance, high overtime and low satisfaction each push the risk up. Pick the weights from
-  your prototype.
-- Thresholds for the level, e.g. **High ≥ 70, Medium ≥ 40, Low below 40**.
-- The compute uses `@api.depends(...)` on the 5 inputs, so **editing an input on the form updates
+- One readable dict of weights that add up to 100, one weight per input. Many absences, low
+  performance, high overtime, low satisfaction and a long time since the last raise each push the
+  risk up. Pick the weights from your prototype.
+- **Tenure is risk bands, not a straight line.** In call centres, agents quit most in their first
+  90 days ("nesting") and again around the 1-year mark. Use one small table, e.g.:
+
+  | Tenure (months) | Tenure risk (0–1) |
+  |---|---|
+  | 0–3 | 1.0 (nesting) |
+  | 4–11 | 0.6 |
+  | 12–14 | 0.8 (1-year spike) |
+  | 15–23 | 0.5 |
+  | 24+ | 0.2 |
+
+- Thresholds for the level: **High ≥ 70, Medium ≥ 40, Low below 40**.
+- The compute uses `@api.depends(...)` on the 6 inputs, so **editing an input on the form updates
   the score instantly.** That is the what-if, and you get it for free.
+- **Keep the field names exactly as in the table above.** After your PR is merged, Nel will connect
+  them to the other features (performance from QA call scores, overtime from Workforce shifts) and
+  add an AI reason. Renamed fields would break that.
 
 ### Screens
 
 - Replace the placeholder in **`views/hr_employee_views.xml`** with:
-  - an "Agent Inputs" group (the 5 inputs)
+  - an "Agent Inputs" group (the 6 inputs)
   - a "Attrition Risk" group: score and level, with the level shown as a coloured badge
     (red High / orange Medium / green Low)
 - Add score and level as columns on the employee list view, plus a "Risk Level" group-by in the
@@ -89,6 +107,7 @@ Copy the pattern in `tests/test_lead_scoring.py` (`TransactionCase`,
 1. A clearly high-risk agent gets level **High**.
 2. A clearly low-risk agent gets level **Low**.
 3. Changing one input (e.g. overtime up) raises the score.
+4. A new hire (2 months) scores higher than a 3-year agent with the same other inputs.
 
 Run all tests from **PowerShell** (Git Bash breaks the command):
 
