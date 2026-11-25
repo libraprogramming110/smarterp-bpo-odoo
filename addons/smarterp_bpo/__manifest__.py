@@ -9,8 +9,8 @@
         'data/utm_source_data.xml',
         'views/placeholders.xml',
         'views/crm_lead_views.xml',
-        'views/menus.xml',
         'views/res_partner_views.xml',
+        'views/menus.xml',
         'views/hr_employee_views.xml',
     ],
     'assets': {

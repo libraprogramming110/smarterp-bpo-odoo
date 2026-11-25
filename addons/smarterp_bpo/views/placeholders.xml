@@ -1,12 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <!-- Placeholder pages, one per planned feature. Replace each record with the real feature's action. -->
-    <record id="action_placeholder_churn_prediction" model="ir.actions.client">
-        <field name="name">Churn Prediction</field>
-        <field name="tag">smarterp_bpo.placeholder</field>
-        <field name="params" eval="{'what': 'Estimates churn risk from AI sentiment of customer messages plus payment history.', 'where': 'Companies in Contacts (SmartERP tab on the contact form).', 'date': 'Nov 20, 2026'}"/>
-    </record>
-
     <record id="action_placeholder_workforce" model="ir.actions.client">
         <field name="name">Workforce Forecasting &amp; Scheduling</field>
         <field name="tag">smarterp_bpo.placeholder</field>

@@ -1,2 +1,3 @@
 from . import ai_helper
 from . import crm_lead
+from . import res_partner

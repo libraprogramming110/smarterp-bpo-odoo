@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Placeholder tab. Replace with the real Churn Prediction fields when the feature ships. -->
+    <!-- Churn Prediction: every BPO client gets a risk score from the signals we have; confidence says how much we know. -->
     <record id="view_partner_form_smarterp" model="ir.ui.view">
         <field name="name">res.partner.form.smarterp</field>
         <field name="model">res.partner</field>
@@ -8,11 +8,107 @@
         <field name="arch" type="xml">
             <xpath expr="//notebook" position="inside">
                 <page string="SmartERP" name="smarterp">
-                    <div class="alert alert-info" role="status">
-                        <strong>Churn Prediction</strong> will appear here. Target date: Nov 20, 2026.
-                    </div>
+                    <group invisible="not smarterp_is_bpo_client">
+                        <group string="Churn Risk">
+                            <field name="smarterp_churn_score"/>
+                            <field name="smarterp_health" widget="badge"
+                                   decoration-danger="smarterp_health == 'red'"
+                                   decoration-warning="smarterp_health == 'yellow'"
+                                   decoration-success="smarterp_health == 'green'"/>
+                        </group>
+                        <group string="Confidence">
+                            <field name="smarterp_confidence" string="Confidence (%)"/>
+                            <field name="smarterp_confidence_level" string="Level" widget="badge"
+                                   decoration-success="smarterp_confidence_level == 'high'"
+                                   decoration-warning="smarterp_confidence_level == 'medium'"
+                                   decoration-muted="smarterp_confidence_level == 'low'"/>
+                        </group>
+                    </group>
+                    <group>
+                        <group string="Signals" invisible="not smarterp_is_bpo_client">
+                            <!-- Set by an analysis only: hidden until one has run, so 0.00 isn't read as "neutral". -->
+                            <field name="smarterp_sentiment" invisible="not smarterp_risk_phrases"/>
+                            <field name="smarterp_sentiment_trend" invisible="not smarterp_risk_phrases"/>
+                            <field name="smarterp_risk_phrases" invisible="not smarterp_risk_phrases"/>
+                            <field name="smarterp_complaint_count"/>
+                            <field name="smarterp_last_client_message"/>
+                        </group>
+                        <group string="Inputs">
+                            <field name="smarterp_is_bpo_client"/>
+                            <field name="smarterp_contract_end" invisible="not smarterp_is_bpo_client"/>
+                            <field name="smarterp_current_seats" invisible="not smarterp_is_bpo_client"/>
+                            <field name="smarterp_previous_seats" invisible="not smarterp_is_bpo_client"/>
+                        </group>
+                    </group>
+                    <group string="Why and What Next" invisible="not smarterp_is_bpo_client">
+                        <field name="smarterp_reason" readonly="1"/>
+                        <field name="smarterp_retention_action" readonly="1"/>
+                        <field name="smarterp_reason_source" readonly="1"/>
+                    </group>
+                    <button name="action_smarterp_reanalyze" type="object" string="Re-analyze with AI"
+                            class="btn-primary" invisible="not smarterp_is_bpo_client"/>
                 </page>
             </xpath>
         </field>
+    </record>
+
+    <record id="view_res_partner_filter_smarterp" model="ir.ui.view">
+        <field name="name">res.partner.search.smarterp</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_res_partner_filter"/>
+        <field name="arch" type="xml">
+            <xpath expr="//search" position="inside">
+                <separator/>
+                <filter string="Red" name="smarterp_red" domain="[('smarterp_health', '=', 'red')]"/>
+                <filter string="Low confidence" name="smarterp_low_confidence"
+                        domain="[('smarterp_confidence_level', '=', 'low')]"/>
+                <group>
+                    <filter string="Health" name="smarterp_health" context="{'group_by': 'smarterp_health'}"/>
+                </group>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Churn Risk menu: BPO clients, highest risk first. -->
+    <record id="view_partner_list_smarterp_churn" model="ir.ui.view">
+        <field name="name">res.partner.list.smarterp.churn</field>
+        <field name="model">res.partner</field>
+        <field name="priority">99</field>
+        <field name="arch" type="xml">
+            <list string="Churn Risk" default_order="smarterp_churn_score desc">
+                <field name="name"/>
+                <field name="smarterp_health" widget="badge"
+                       decoration-danger="smarterp_health == 'red'"
+                       decoration-warning="smarterp_health == 'yellow'"
+                       decoration-success="smarterp_health == 'green'"/>
+                <field name="smarterp_churn_score"/>
+                <field name="smarterp_confidence_level" widget="badge"
+                       decoration-success="smarterp_confidence_level == 'high'"
+                       decoration-warning="smarterp_confidence_level == 'medium'"
+                       decoration-muted="smarterp_confidence_level == 'low'"/>
+                <field name="smarterp_contract_end" optional="show"/>
+                <field name="smarterp_retention_action" optional="show"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_smarterp_churn_risk" model="ir.actions.act_window">
+        <field name="name">Churn Risk</field>
+        <field name="res_model">res.partner</field>
+        <field name="view_mode">list,form</field>
+        <field name="view_id" ref="view_partner_list_smarterp_churn"/>
+        <field name="search_view_id" ref="base.view_res_partner_filter"/>
+        <field name="domain">[('smarterp_is_bpo_client', '=', True)]</field>
+        <field name="context">{'default_smarterp_is_bpo_client': True, 'default_is_company': True}</field>
+    </record>
+
+    <!-- Action menu on the contact list: read the selected clients' messages with Gemini. -->
+    <record id="action_smarterp_analyze_churn" model="ir.actions.server">
+        <field name="name">Analyze selected (max 30)</field>
+        <field name="model_id" ref="base.model_res_partner"/>
+        <field name="binding_model_id" ref="base.model_res_partner"/>
+        <field name="binding_view_types">list</field>
+        <field name="state">code</field>
+        <field name="code">action = records.action_smarterp_analyze_churn()</field>
     </record>
 </odoo>

@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 import time
 
 import requests
@@ -11,7 +12,7 @@ _logger = logging.getLogger(__name__)
 GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent'
 
 POSITIVE_WORDS = ['good', 'great', 'excellent', 'happy', 'thanks', 'thank you', 'love', 'satisfied', 'helpful', 'resolved']
-NEGATIVE_WORDS = ['bad', 'poor', 'terrible', 'angry', 'unhappy', 'hate', 'slow', 'cancel', 'complaint', 'refund', 'disappointed']
+NEGATIVE_WORDS = ['bad', 'poor', 'terrible', 'angry', 'unhappy', 'hate', 'slow', 'cancel', 'complain', 'refund', 'disappointed']
 
 
 class SmarterpAi(models.AbstractModel):
@@ -49,8 +50,9 @@ class SmarterpAi(models.AbstractModel):
     def keyword_sentiment(self, text):
         """Label text positive/neutral/negative by counting keywords; score is -1..1."""
         text = (text or '').lower()
-        pos = sum(1 for w in POSITIVE_WORDS if w in text)
-        neg = sum(1 for w in NEGATIVE_WORDS if w in text)
+        # Match at the start of a word: "unhappy" doesn't count as "happy", "complaints" still counts.
+        pos = sum(1 for w in POSITIVE_WORDS if re.search(r'\b%s' % re.escape(w), text))
+        neg = sum(1 for w in NEGATIVE_WORDS if re.search(r'\b%s' % re.escape(w), text))
         score = (pos - neg) / (pos + neg) if pos + neg else 0.0
         if score > 0:
             label = 'positive'

@@ -22,6 +22,8 @@ class TestLeadScoring(TransactionCase):
 
     def test_outbound_lead_gets_medium_confidence(self):
         lead = self.env['crm.lead'].create(self.outbound_vals)
+        # Odoo's win chance is learned from whatever leads are in the database: pin it so the test doesn't drift.
+        lead.automated_probability = 30
         self.assertEqual(lead.smarterp_confidence_level, 'medium')
         self.assertTrue(40 <= lead.smarterp_score <= 65, lead.smarterp_score)
 
