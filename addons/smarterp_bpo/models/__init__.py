@@ -1,2 +1,2 @@
 from . import ai_helper
-import hr_employee
+from . import hr_employee
