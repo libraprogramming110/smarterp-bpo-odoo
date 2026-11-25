@@ -19,10 +19,27 @@ services:
       USER: ${POSTGRES_USER}
       PASSWORD: ${POSTGRES_PASSWORD}
       GEMINI_API_KEY: ${GEMINI_API_KEY}
+      # Only the "Enrich with AI" button calls n8n. Odoo does not depend on it: if n8n is down, only that button fails.
+      N8N_ENRICH_URL: http://n8n:5678/webhook/smarterp-enrich
     volumes:
       - odoo-data:/var/lib/odoo
       - ./addons:/mnt/extra-addons
 
+  # Enrich with AI: reads a lead's company website with Gemini. Workflow: n8n/enrich-company.json.
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:2.33.7
+    ports:
+      - "5678:5678"
+    environment:
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      N8N_BLOCK_ENV_ACCESS_IN_NODE: "false"
+      GENERIC_TIMEZONE: Asia/Manila
+      N8N_SECURE_COOKIE: "false"
+    volumes:
+      - n8n-data:/home/node/.n8n
+      - ./n8n:/files:ro
+
 volumes:
   db-data:
   odoo-data:
+  n8n-data:

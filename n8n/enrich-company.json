@@ -1,0 +1,186 @@
+{
+  "id": "smarterpEnrich01",
+  "name": "SmartERP - Enrich company",
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "nodes": [
+    {
+      "id": "0b6f2a10-1c1e-4a51-9d0a-000000000001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "5e1c0c62-7a40-4f43-9c51-0a5e7e000001",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "smarterp-enrich",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "0b6f2a10-1c1e-4a51-9d0a-000000000002",
+      "name": "Pick URL",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 0],
+      "parameters": {
+        "jsCode": "// Lead website if given, else https://<email domain>. Free mail domains say nothing about the company: no fetch.\nconst FREE_MAIL = ['gmail', 'yahoo', 'outlook', 'hotmail', 'icloud', 'aol', 'proton', 'live', 'ymail'];\nconst body = $input.first().json.body || {};\nconst domain = String(body.email_domain || '').trim().toLowerCase();\nlet url = String(body.website || '').trim();\nif (!url && domain && !FREE_MAIL.some(f => domain.startsWith(f))) url = 'https://' + domain;\nif (url && !/^https?:\\/\\//i.test(url)) url = 'https://' + url;\nreturn [{ json: { company: String(body.company || '').trim(), domain, url } }];"
+      }
+    },
+    {
+      "id": "0b6f2a10-1c1e-4a51-9d0a-000000000003",
+      "name": "Has URL?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [440, 0],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "6f0c8a3e-2b8f-4d1e-9a51-000000000010",
+              "leftValue": "={{ $json.url }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "0b6f2a10-1c1e-4a51-9d0a-000000000004",
+      "name": "Fetch website",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, -100],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 10000,
+          "redirect": {
+            "redirect": {
+              "followRedirects": true
+            }
+          },
+          "response": {
+            "response": {
+              "responseFormat": "text",
+              "outputPropertyName": "data"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "0b6f2a10-1c1e-4a51-9d0a-000000000005",
+      "name": "Build prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 0],
+      "parameters": {
+        "jsCode": "// Website HTML -> plain text (max 6000 chars), then the Gemini request body.\nconst lead = $('Pick URL').first().json;\nconst html = String($input.first().json.data || '');\nconst text = html\n  .replace(/<(script|style|noscript|svg)[\\s\\S]*?<\\/\\1>/gi, ' ')\n  .replace(/<[^>]+>/g, ' ')\n  .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&#?\\w+;/g, ' ')\n  .replace(/\\s+/g, ' ').trim().slice(0, 6000);\nconst usable = text.length >= 200;  // less than this is usually a block page or an empty JS shell\nconst prompt = 'You research companies for a BPO (call center outsourcing) sales team.\\n'\n  + 'Company name: ' + (lead.company || 'unknown') + '\\n'\n  + 'Domain: ' + (lead.domain || 'unknown') + '\\n'\n  + 'Website text: ' + (usable ? text : 'website unreadable') + '\\n\\n'\n  + 'Answer with STRICT JSON only, no other text, exactly these keys:\\n'\n  + '{\"industry\": one of \"ecommerce\", \"finance\", \"healthcare\", \"telecom\", \"tech\", \"other\", \"unknown\",\\n'\n  + ' \"summary\": one or two sentences on what the company does,\\n'\n  + ' \"support_channels\": short comma list of customer support channels, e.g. \"phone, chat, email\", or \"unknown\",\\n'\n  + ' \"company_size\": short estimate, e.g. \"200-500 employees\", or \"unknown\",\\n'\n  + ' \"source\": \"' + (usable ? 'website' : 'name_only') + '\"}';\nreturn [{ json: {\n  source: usable ? 'website' : 'name_only',\n  geminiBody: { contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: 'application/json' } },\n} }];"
+      }
+    },
+    {
+      "id": "0b6f2a10-1c1e-4a51-9d0a-000000000006",
+      "name": "Ask Gemini",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, 0],
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000,
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-goog-api-key",
+              "value": "={{ $env.GEMINI_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.geminiBody) }}",
+        "options": {
+          "timeout": 40000
+        }
+      }
+    },
+    {
+      "id": "0b6f2a10-1c1e-4a51-9d0a-000000000007",
+      "name": "Parse answer",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1320, 0],
+      "parameters": {
+        "jsCode": "// Gemini text -> our JSON. Anything unreadable becomes {error} so Odoo shows its offline message.\nconst INDUSTRIES = ['ecommerce', 'finance', 'healthcare', 'telecom', 'tech', 'other', 'unknown'];\nconst item = $input.first().json;\nconst source = $('Build prompt').first().json.source;\ntry {\n  const raw = item.candidates[0].content.parts[0].text;\n  const answer = JSON.parse(raw.replace(/```(json)?/gi, '').trim());\n  const industry = String(answer.industry || 'unknown').trim().toLowerCase();\n  return [{ json: {\n    industry: INDUSTRIES.includes(industry) ? industry : 'unknown',\n    summary: String(answer.summary || '').trim(),\n    support_channels: String(answer.support_channels || 'unknown').trim(),\n    company_size: String(answer.company_size || 'unknown').trim(),\n    source,\n  } }];\n} catch (e) {\n  return [{ json: { error: 'Gemini answer unreadable: ' + ((item.error && item.error.message) || e.message) } }];\n}"
+      }
+    },
+    {
+      "id": "0b6f2a10-1c1e-4a51-9d0a-000000000008",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1540, 0],
+      "parameters": {
+        "respondWith": "firstIncomingItem",
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{ "node": "Pick URL", "type": "main", "index": 0 }]]
+    },
+    "Pick URL": {
+      "main": [[{ "node": "Has URL?", "type": "main", "index": 0 }]]
+    },
+    "Has URL?": {
+      "main": [
+        [{ "node": "Fetch website", "type": "main", "index": 0 }],
+        [{ "node": "Build prompt", "type": "main", "index": 0 }]
+      ]
+    },
+    "Fetch website": {
+      "main": [[{ "node": "Build prompt", "type": "main", "index": 0 }]]
+    },
+    "Build prompt": {
+      "main": [[{ "node": "Ask Gemini", "type": "main", "index": 0 }]]
+    },
+    "Ask Gemini": {
+      "main": [[{ "node": "Parse answer", "type": "main", "index": 0 }]]
+    },
+    "Parse answer": {
+      "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]]
+    }
+  }
+}

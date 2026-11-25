@@ -4,7 +4,7 @@
     'summary': 'AI features for BPO on Odoo CRM',
     'author': 'ISY-131 Team',
     'category': 'Sales/CRM',
-    'depends': ['base', 'crm', 'contacts', 'hr'],
+    'depends': ['base', 'crm', 'contacts', 'hr', 'crm_iap_enrich'],
     'data': [
         'data/utm_source_data.xml',
         'views/placeholders.xml',

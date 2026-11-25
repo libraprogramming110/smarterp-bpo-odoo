@@ -1,5 +1,7 @@
 from unittest.mock import patch
 
+import requests
+
 from odoo.tests import TransactionCase, tagged
 
 INQUIRY = '<p>We need about 40 agents starting next month.</p>'
@@ -128,3 +130,57 @@ class TestLeadScoring(TransactionCase):
         self.assertEqual(lead.smarterp_timeline, 'now')
         self.assertEqual(lead.smarterp_signals_source, 'gemini')
         self.assertGreater(lead.smarterp_score, before)
+
+    # Enrich with AI: n8n is mocked, these pass with n8n stopped.
+    def _enrich(self, lead, reply=None, error=None):
+        enrich = {'industry': 'finance', 'summary': 'A regional bank.', 'support_channels': 'phone, chat',
+                  'company_size': '200-500 employees', 'source': 'website'}
+        with patch.dict('os.environ', {'N8N_ENRICH_URL': 'http://n8n:5678/webhook/smarterp-enrich'}), \
+                patch('odoo.addons.smarterp_bpo.models.crm_lead.requests.post') as post:
+            if error:
+                post.side_effect = error
+            elif isinstance(reply, Exception):
+                post.return_value.json.side_effect = reply  # e.g. an HTML error page instead of JSON
+            else:
+                post.return_value.json.return_value = enrich if reply is None else reply
+            return lead.action_smarterp_enrich()
+
+    def test_enrich_writes_company_facts(self):
+        lead = self.env['crm.lead'].create({'name': 'Bank lead', 'email_from': 'it@bank.example'})
+        before = lead.smarterp_score
+        result = self._enrich(lead)
+        self.assertEqual(result['params']['type'], 'success')
+        self.assertEqual(lead.smarterp_industry, 'finance')
+        self.assertEqual(lead.smarterp_company_profile, 'A regional bank.')
+        self.assertEqual(lead.smarterp_support_channels, 'phone, chat')
+        self.assertEqual(lead.smarterp_company_size, '200-500 employees')
+        self.assertEqual(lead.smarterp_enrich_source, 'website')
+        self.assertEqual(lead.website, 'https://bank.example')
+        self.assertTrue(lead.smarterp_enriched_on)
+        self.assertNotEqual(lead.smarterp_score, before)
+
+    def test_enrich_keeps_industry_already_set(self):
+        lead = self.env['crm.lead'].create(self.outbound_vals)
+        self._enrich(lead)
+        self.assertEqual(lead.smarterp_industry, 'telecom')
+        self.assertEqual(lead.smarterp_company_profile, 'A regional bank.')
+
+    def test_enrich_n8n_down_leaves_lead_unchanged(self):
+        lead = self.env['crm.lead'].create({'name': 'Bank lead', 'email_from': 'it@bank.example'})
+        result = self._enrich(lead, error=requests.ConnectionError())
+        self.assertEqual(result['params']['type'], 'warning')
+        self.assertFalse(lead.smarterp_industry)
+        self.assertFalse(lead.smarterp_company_profile)
+        self.assertFalse(lead.smarterp_enriched_on)
+        self.assertFalse(lead.website)
+
+    def test_enrich_garbage_reply_leaves_lead_unchanged(self):
+        lead = self.env['crm.lead'].create({'name': 'Bank lead', 'email_from': 'it@bank.example'})
+        for reply in ({'error': 'Gemini answer unreadable'}, {'summary': 'Missing the other keys'}, ['not', 'a', 'dict']):
+            result = self._enrich(lead, reply=reply)
+            self.assertEqual(result['params']['type'], 'warning')
+        result = self._enrich(lead, reply=ValueError('Expecting value'))
+        self.assertEqual(result['params']['type'], 'warning')
+        self.assertFalse(lead.smarterp_industry)
+        self.assertFalse(lead.smarterp_company_profile)
+        self.assertFalse(lead.smarterp_enriched_on)

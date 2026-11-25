@@ -45,9 +45,34 @@
                         <field name="smarterp_next_step" readonly="1"/>
                         <field name="smarterp_reason_source" readonly="1"/>
                     </group>
+                    <!-- Filled by Enrich with AI (n8n reads the company website with Gemini). -->
+                    <group string="Company Research">
+                        <field name="smarterp_company_profile" readonly="1"/>
+                        <field name="smarterp_support_channels" readonly="1"/>
+                        <field name="smarterp_company_size" readonly="1"/>
+                        <field name="smarterp_enrich_source" readonly="1"/>
+                        <field name="smarterp_enriched_on" readonly="1"/>
+                    </group>
                     <button name="action_smarterp_rescore" type="object" string="Re-score with AI"
                             class="btn-primary"/>
+                    <button name="action_smarterp_enrich" type="object" string="Enrich with AI"
+                            class="btn-secondary ms-2"/>
                 </page>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Hide Odoo's paid IAP "Enrich" button: the service is off and it would be confused with Enrich with AI. -->
+    <record id="crm_lead_view_form_smarterp_hide_iap_enrich" model="ir.ui.view">
+        <field name="name">crm.lead.form.smarterp.hide.iap.enrich</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="crm_iap_enrich.crm_lead_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//button[@name='iap_enrich'][1]" position="attributes">
+                <attribute name="invisible">1</attribute>
+            </xpath>
+            <xpath expr="//button[@name='iap_enrich'][2]" position="attributes">
+                <attribute name="invisible">1</attribute>
             </xpath>
         </field>
     </record>

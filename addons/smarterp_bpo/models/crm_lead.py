@@ -1,6 +1,9 @@
 import logging
+import os
 import re
 import time
+
+import requests
 
 from odoo import api, fields, models
 from odoo.tools import html2plaintext
@@ -30,6 +33,8 @@ WARM_FROM = 40
 HIGH_CONFIDENCE_FROM = 70
 MEDIUM_CONFIDENCE_FROM = 40
 ANALYZE_MAX = 30    # leads per "Analyze selected" run, Gemini free tier allows 15 calls/min
+ENRICH_TIMEOUT = 60  # seconds: n8n fetches the website, then asks Gemini
+ENRICH_OFFLINE = "Enrich service is offline or didn't answer. Lead unchanged."
 
 FACTOR_LABELS = {
     'industry': 'industry fit',
@@ -116,6 +121,16 @@ class CrmLead(models.Model):
         ('gemini', 'Gemini'),
         ('rules', 'Rules'),
     ], string='Reason Source')
+
+    # Company Research, filled by the "Enrich with AI" button (n8n reads the company website with Gemini).
+    smarterp_company_profile = fields.Text('Company Profile')
+    smarterp_support_channels = fields.Char('Support Channels')
+    smarterp_company_size = fields.Char('Company Size')
+    smarterp_enrich_source = fields.Selection([
+        ('website', 'Website'),
+        ('name_only', 'Company name only'),
+    ], string='Enriched From')
+    smarterp_enriched_on = fields.Datetime('Enriched On')
 
     @api.depends('email_from')
     def _compute_smarterp_corporate_email(self):
@@ -359,3 +374,55 @@ class CrmLead(models.Model):
                             'smarterp_next_step': lead._smarterp_rules_next_step(),
                             'smarterp_reason_source': 'rules'})
         return True
+
+    def _smarterp_enrich_notification(self, message, kind):
+        return {'type': 'ir.actions.client', 'tag': 'display_notification', 'params': {
+            'title': 'Enrich with AI', 'message': message, 'type': kind,
+            'next': {'type': 'ir.actions.client', 'tag': 'soft_reload'},
+        }}
+
+    def action_smarterp_enrich(self):
+        """Button: n8n reads the company website with Gemini and sends back company facts.
+        If n8n is down or answers nonsense, nothing is written and the user gets a warning."""
+        self.ensure_one()
+        email = (self.email_from or '').lower()
+        email_domain = email.split('@')[-1].strip(' >') if '@' in email else ''
+        url = os.environ.get('N8N_ENRICH_URL')
+        reply = None
+        if not url:
+            _logger.warning('N8N_ENRICH_URL is not set, cannot enrich lead %s', self.id)
+        else:
+            try:
+                response = requests.post(url, timeout=ENRICH_TIMEOUT, json={
+                    'lead_id': self.id,
+                    'company': self.partner_name or self.name or '',
+                    'website': self.website or '',
+                    'email_domain': email_domain,
+                })
+                response.raise_for_status()
+                reply = response.json()
+            except (requests.RequestException, ValueError) as e:
+                _logger.warning('Enrich call failed for lead %s: %s', self.id, type(e).__name__)
+        keys = ('industry', 'summary', 'support_channels', 'company_size', 'source')
+        if (not isinstance(reply, dict) or not all(isinstance(reply.get(key), str) for key in keys)
+                or not reply['summary'].strip() or reply['source'] not in ('website', 'name_only')):
+            if reply is not None:
+                _logger.warning('Enrich reply unreadable for lead %s: %r', self.id, str(reply)[:300])
+            return self._smarterp_enrich_notification(ENRICH_OFFLINE, 'warning')
+        vals = {
+            'smarterp_company_profile': reply['summary'].strip(),
+            'smarterp_support_channels': reply['support_channels'].strip(),
+            'smarterp_company_size': reply['company_size'].strip(),
+            'smarterp_enrich_source': reply['source'],
+            'smarterp_enriched_on': fields.Datetime.now(),
+        }
+        # Industry is a score signal: only fill it when empty, never overwrite what the salesperson set.
+        if not self.smarterp_industry and reply['industry'] in INDUSTRY_FACTOR:
+            vals['smarterp_industry'] = reply['industry']
+        # n8n read https://<email domain> when the lead had no website.
+        if reply['source'] == 'website' and not self.website and email_domain:
+            vals['website'] = 'https://' + email_domain
+        self.write(vals)
+        if reply['source'] == 'website':
+            return self._smarterp_enrich_notification('Enriched from website', 'success')
+        return self._smarterp_enrich_notification('Enriched from company name only (website unreadable)', 'success')
