@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Placeholder tab. Replace with the real Agent Attrition fields when the feature ships. -->
+    <!-- SmartERP tab on the employee form: 6 inputs, score and level. -->
     <record id="view_employee_form_smarterp" model="ir.ui.view">
         <field name="name">hr.employee.form.smarterp</field>
         <field name="model">hr.employee</field>
@@ -8,10 +8,55 @@
         <field name="arch" type="xml">
             <xpath expr="//notebook" position="inside">
                 <page string="SmartERP" name="smarterp">
-                    <div class="alert alert-info" role="status">
-                        <strong>Agent Attrition</strong> will appear here. Target date: Nov 24, 2026.
-                    </div>
+                    <group>
+                        <group string="Agent Inputs">
+                            <field name="smarterp_tenure_months"/>
+                            <field name="smarterp_absences_90d"/>
+                            <field name="smarterp_performance"/>
+                            <field name="smarterp_overtime_hours"/>
+                            <field name="smarterp_satisfaction"/>
+                            <field name="smarterp_months_since_raise"/>
+                        </group>
+                        <group string="Attrition Risk">
+                            <field name="smarterp_risk_score"/>
+                            <field name="smarterp_risk_level" widget="badge"
+                                   decoration-danger="smarterp_risk_level == 'high'"
+                                   decoration-warning="smarterp_risk_level == 'medium'"
+                                   decoration-success="smarterp_risk_level == 'low'"/>
+                        </group>
+                    </group>
                 </page>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Score and level columns on the employee list. -->
+    <record id="view_employee_list_smarterp" model="ir.ui.view">
+        <field name="name">hr.employee.list.smarterp</field>
+        <field name="model">hr.employee</field>
+        <field name="inherit_id" ref="hr.view_employee_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='name']" position="after">
+                <field name="smarterp_risk_score" optional="show"/>
+                <field name="smarterp_risk_level" widget="badge" optional="show"
+                       decoration-danger="smarterp_risk_level == 'high'"
+                       decoration-warning="smarterp_risk_level == 'medium'"
+                       decoration-success="smarterp_risk_level == 'low'"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- "Risk Level" group-by in the employee search. -->
+    <record id="view_employee_search_smarterp" model="ir.ui.view">
+        <field name="name">hr.employee.search.smarterp</field>
+        <field name="model">hr.employee</field>
+        <field name="inherit_id" ref="hr.view_employee_filter"/>
+        <field name="arch" type="xml">
+            <xpath expr="//search" position="inside">
+                <group string="SmartERP">
+                    <filter string="Risk Level" name="group_smarterp_risk_level"
+                            context="{'group_by': 'smarterp_risk_level'}"/>
+                </group>
             </xpath>
         </field>
     </record>
