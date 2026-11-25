@@ -3,7 +3,7 @@
     <menuitem id="menu_smarterp_root" name="SmartERP" sequence="10"/>
 
     <menuitem id="menu_lead_scoring" name="Lead Scoring" parent="menu_smarterp_root"
-              action="action_placeholder_lead_scoring" sequence="10"/>
+              action="action_smarterp_lead_scoring" sequence="10"/>
     <menuitem id="menu_churn_prediction" name="Churn Prediction" parent="menu_smarterp_root"
               action="action_placeholder_churn_prediction" sequence="20"/>
     <menuitem id="menu_workforce" name="Workforce Forecasting &amp; Scheduling" parent="menu_smarterp_root"

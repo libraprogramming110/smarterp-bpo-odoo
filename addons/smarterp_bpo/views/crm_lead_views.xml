@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Placeholder tab. Replace with the real Lead Scoring fields when the feature ships. -->
+    <!-- Lead Scoring: every lead is scored from the signals we have; confidence says how much we know. -->
     <record id="crm_lead_view_form_smarterp" model="ir.ui.view">
         <field name="name">crm.lead.form.smarterp</field>
         <field name="model">crm.lead</field>
@@ -8,11 +8,128 @@
         <field name="arch" type="xml">
             <xpath expr="//notebook" position="inside">
                 <page string="SmartERP" name="smarterp">
-                    <div class="alert alert-info" role="status">
-                        <strong>Lead Scoring</strong> will appear here. Target date: Nov 19, 2026.
-                    </div>
+                    <group>
+                        <group string="Lead Score">
+                            <field name="smarterp_score"/>
+                            <field name="smarterp_tier" widget="badge"
+                                   decoration-danger="smarterp_tier == 'hot'"
+                                   decoration-warning="smarterp_tier == 'warm'"
+                                   decoration-info="smarterp_tier == 'cold'"/>
+                        </group>
+                        <group string="Confidence">
+                            <field name="smarterp_confidence" string="Confidence (%)"/>
+                            <field name="smarterp_confidence_level" string="Level" widget="badge"
+                                   decoration-success="smarterp_confidence_level == 'high'"
+                                   decoration-warning="smarterp_confidence_level == 'medium'"
+                                   decoration-muted="smarterp_confidence_level == 'low'"/>
+                        </group>
+                    </group>
+                    <group>
+                        <group string="Signals">
+                            <field name="smarterp_corporate_email"/>
+                            <field name="source_id" string="Source" readonly="1"/>
+                            <field name="smarterp_email_count"/>
+                            <field name="automated_probability" string="Odoo AI Win Chance (%)" readonly="1"/>
+                        </group>
+                        <group string="Inputs">
+                            <field name="smarterp_seats_needed"/>
+                            <field name="smarterp_timeline"/>
+                            <field name="smarterp_industry"/>
+                            <field name="smarterp_public_rating"/>
+                            <field name="smarterp_review_count"/>
+                            <field name="smarterp_signals_source" readonly="1"/>
+                        </group>
+                    </group>
+                    <group string="Why and What Next">
+                        <field name="smarterp_reason" readonly="1"/>
+                        <field name="smarterp_next_step" readonly="1"/>
+                        <field name="smarterp_reason_source" readonly="1"/>
+                    </group>
+                    <button name="action_smarterp_rescore" type="object" string="Re-score with AI"
+                            class="btn-primary"/>
                 </page>
             </xpath>
         </field>
+    </record>
+
+    <record id="crm_lead_view_list_smarterp" model="ir.ui.view">
+        <field name="name">crm.lead.list.smarterp</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="crm.crm_case_tree_view_oppor"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='stage_id']" position="after">
+                <field name="smarterp_score" optional="show"/>
+                <field name="smarterp_tier" optional="show" widget="badge"
+                       decoration-danger="smarterp_tier == 'hot'"
+                       decoration-warning="smarterp_tier == 'warm'"
+                       decoration-info="smarterp_tier == 'cold'"/>
+                <field name="smarterp_confidence_level" optional="show" widget="badge"
+                       decoration-success="smarterp_confidence_level == 'high'"
+                       decoration-warning="smarterp_confidence_level == 'medium'"
+                       decoration-muted="smarterp_confidence_level == 'low'"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="crm_lead_view_search_smarterp" model="ir.ui.view">
+        <field name="name">crm.lead.search.smarterp</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="crm.view_crm_case_opportunities_filter"/>
+        <field name="arch" type="xml">
+            <xpath expr="//filter[@name='stage']" position="after">
+                <filter string="Lead Tier" name="smarterp_tier" context="{'group_by': 'smarterp_tier'}"/>
+            </xpath>
+            <xpath expr="//search" position="inside">
+                <separator/>
+                <filter string="Hot" name="smarterp_hot" domain="[('smarterp_tier', '=', 'hot')]"/>
+                <filter string="Low confidence" name="smarterp_low_confidence"
+                        domain="[('smarterp_confidence_level', '=', 'low')]"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Lead Scoring menu: open leads, best score first. -->
+    <record id="crm_lead_view_list_smarterp_scoring" model="ir.ui.view">
+        <field name="name">crm.lead.list.smarterp.scoring</field>
+        <field name="model">crm.lead</field>
+        <field name="priority">99</field>
+        <field name="arch" type="xml">
+            <list string="Lead Scoring" default_order="smarterp_score desc">
+                <field name="name"/>
+                <field name="partner_name" optional="show"/>
+                <field name="user_id" widget="many2one_avatar_user" optional="show"/>
+                <field name="stage_id" optional="show"/>
+                <field name="automated_probability" string="Odoo AI Win Chance (%)"/>
+                <field name="smarterp_score"/>
+                <field name="smarterp_tier" widget="badge"
+                       decoration-danger="smarterp_tier == 'hot'"
+                       decoration-warning="smarterp_tier == 'warm'"
+                       decoration-info="smarterp_tier == 'cold'"/>
+                <field name="smarterp_confidence_level" widget="badge"
+                       decoration-success="smarterp_confidence_level == 'high'"
+                       decoration-warning="smarterp_confidence_level == 'medium'"
+                       decoration-muted="smarterp_confidence_level == 'low'"/>
+                <field name="smarterp_next_step" optional="show"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_smarterp_lead_scoring" model="ir.actions.act_window">
+        <field name="name">Lead Scoring</field>
+        <field name="res_model">crm.lead</field>
+        <field name="view_mode">list,form</field>
+        <field name="view_id" ref="crm_lead_view_list_smarterp_scoring"/>
+        <field name="search_view_id" ref="crm.view_crm_case_opportunities_filter"/>
+        <field name="domain">[('won_status', '=', 'pending')]</field>
+    </record>
+
+    <!-- Action menu on the lead list: read the inquiry of the selected leads with Gemini. -->
+    <record id="action_smarterp_analyze_leads" model="ir.actions.server">
+        <field name="name">Analyze selected (max 30)</field>
+        <field name="model_id" ref="crm.model_crm_lead"/>
+        <field name="binding_model_id" ref="crm.model_crm_lead"/>
+        <field name="binding_view_types">list</field>
+        <field name="state">code</field>
+        <field name="code">action = records.action_smarterp_analyze()</field>
     </record>
 </odoo>

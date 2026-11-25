@@ -1,5 +1,6 @@
 import logging
 import os
+import time
 
 import requests
 
@@ -24,18 +25,25 @@ class SmarterpAi(models.AbstractModel):
         if not api_key:
             _logger.warning('GEMINI_API_KEY is not set, skipping Gemini call')
             return None
-        try:
-            response = requests.post(
-                GEMINI_URL,
-                headers={'x-goog-api-key': api_key},
-                json={'contents': [{'parts': [{'text': prompt}]}]},
-                timeout=15,
-            )
-            response.raise_for_status()
-            return response.json()['candidates'][0]['content']['parts'][0]['text'].strip()
-        except (requests.RequestException, ValueError, KeyError, IndexError) as e:
-            _logger.warning('Gemini call failed: %s', type(e).__name__)
-            return None
+        for attempt in range(2):
+            try:
+                response = requests.post(
+                    GEMINI_URL,
+                    headers={'x-goog-api-key': api_key},
+                    json={'contents': [{'parts': [{'text': prompt}]}]},
+                    timeout=15,
+                )
+                response.raise_for_status()
+                return response.json()['candidates'][0]['content']['parts'][0]['text'].strip()
+            except (requests.ConnectionError, requests.Timeout) as e:
+                error = e
+                if not attempt:
+                    time.sleep(2)  # brief network drop: try once more
+            except (requests.RequestException, ValueError, KeyError, IndexError) as e:
+                error = e
+                break
+        _logger.warning('Gemini call failed: %s', type(error).__name__)
+        return None
 
     @api.model
     def keyword_sentiment(self, text):

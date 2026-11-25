@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <!-- Lead sources used by Lead Scoring. "Referral" already ships with utm (utm.utm_source_referral). -->
+    <record id="utm_source_website" model="utm.source">
+        <field name="name">Website</field>
+    </record>
+    <record id="utm_source_prospect_list" model="utm.source">
+        <field name="name">Prospect list</field>
+    </record>
+</odoo>

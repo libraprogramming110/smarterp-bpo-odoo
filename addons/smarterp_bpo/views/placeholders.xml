@@ -1,12 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <!-- Placeholder pages, one per planned feature. Replace each record with the real feature's action. -->
-    <record id="action_placeholder_lead_scoring" model="ir.actions.client">
-        <field name="name">Lead Scoring</field>
-        <field name="tag">smarterp_bpo.placeholder</field>
-        <field name="params" eval="{'what': 'Scores each CRM lead and labels it Hot, Warm or Cold, with an AI-written reason.', 'where': 'CRM leads and opportunities (SmartERP tab on the lead form).', 'date': 'Nov 19, 2026'}"/>
-    </record>
-
     <record id="action_placeholder_churn_prediction" model="ir.actions.client">
         <field name="name">Churn Prediction</field>
         <field name="tag">smarterp_bpo.placeholder</field>
