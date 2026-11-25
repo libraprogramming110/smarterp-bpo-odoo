@@ -93,6 +93,16 @@ class TestChurnPrediction(TransactionCase):
         self.assertEqual(client.smarterp_sentiment_trend, 'worse')
         self.assertAlmostEqual(client.smarterp_sentiment, -0.33, places=2)
 
+    def test_labels_kept_when_reason_unreadable(self):
+        client = self._client()
+        self._post(client, 'Calls went unanswered for hours again yesterday.')
+        answer = 'Message 1: negative\nRisk phrases: no\nSummary: service is slipping.'
+        with patch.object(self.ai_class, 'ask_gemini', return_value=answer):
+            client.action_smarterp_reanalyze()
+        self.assertEqual(client.smarterp_complaint_count, 1)
+        self.assertEqual(client.smarterp_sentiment, -1.0)
+        self.assertEqual(client.smarterp_reason_source, 'rules')
+
     def test_client_email_is_analyzed_automatically(self):
         client = self._client(smarterp_contract_end=self.today + timedelta(days=60))
         answer = ('Message 1: negative\nRisk phrases: yes\nReason: They plan to leave.\n'

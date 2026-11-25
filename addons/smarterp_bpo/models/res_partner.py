@@ -59,7 +59,8 @@ RETENTION_ACTIONS = {
 RISK_PHRASES = ['other vendor', 'another vendor', 'terminate', 'termination', 'rfp', 'cancel',
                 'switch provider', 'switching provider', 'new provider', 'not renew', 'competitor']
 
-REASON_RE = re.compile(r'reason\s*:\s*(.+?)\s*retention\s*action\s*:\s*(.+)', re.I | re.S)
+REASON_RE = re.compile(r'reason\s*:\s*(.+?)\s*(?:retention\s*action|retention|action|next\s*step)\s*:\s*(.+)',
+                       re.I | re.S)
 LABEL_RE = re.compile(r'message\s*(\d+)\s*:\s*(positive|neutral|negative)', re.I)
 RISK_PHRASES_RE = re.compile(r'risk\s*phrases?\s*:\s*(yes|no)', re.I)
 SENTIMENT_LABELS = {'positive': 1.0, 'neutral': 0.0, 'negative': -1.0}
@@ -245,23 +246,23 @@ class ResPartner(models.Model):
         # Tolerant of markdown (**Reason:**) and of the text starting on the next line.
         match = REASON_RE.search(answer)
         labels = {int(number): label.lower() for number, label in LABEL_RE.findall(answer)}
-        gemini = bool(match and labels)
-        if answer and not gemini:
-            _logger.warning('Could not read Gemini churn answer: %r', answer[:300])
+        if answer and not (match and labels):
+            _logger.warning('Could not fully read Gemini churn answer: %r', answer[:1500])
         # One sentiment per message: Gemini's label, keywords for any message it didn't label (or if it failed).
-        scores = [SENTIMENT_LABELS[labels[i]] if gemini and i in labels
+        # The labels are used even when the reason part can't be read.
+        scores = [SENTIMENT_LABELS[labels[i]] if i in labels
                   else ai.keyword_sentiment(self._smarterp_text(m))['score']
                   for i, m in enumerate(messages, 1)]
         lowered = ' '.join(self._smarterp_text(m) for m in messages).lower()
         keyword_phrases = any(re.search(r'\b%s' % re.escape(p), lowered) for p in RISK_PHRASES)
-        phrases = RISK_PHRASES_RE.search(answer) if gemini else None
+        phrases = RISK_PHRASES_RE.search(answer)
         vals = {
             'smarterp_sentiment': sum(scores) / len(scores),
             'smarterp_sentiment_trend': self._smarterp_trend(messages, scores),
             'smarterp_complaint_count': sum(1 for score in scores if score < 0),
             'smarterp_risk_phrases': phrases.group(1).lower() if phrases else ('yes' if keyword_phrases else 'no'),
         }
-        if gemini:
+        if match:
             vals.update({'smarterp_reason': match.group(1).strip(),
                          'smarterp_retention_action': match.group(2).strip(),
                          'smarterp_reason_source': 'gemini'})
