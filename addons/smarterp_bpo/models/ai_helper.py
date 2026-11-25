@@ -37,13 +37,19 @@ class SmarterpAi(models.AbstractModel):
                 response.raise_for_status()
                 return response.json()['candidates'][0]['content']['parts'][0]['text'].strip()
             except (requests.ConnectionError, requests.Timeout) as e:
-                error = e
+                error = type(e).__name__
                 if not attempt:
                     time.sleep(2)  # brief network drop: try once more
+            except requests.HTTPError as e:
+                error = 'HTTP %s' % e.response.status_code
+                if e.response.status_code not in (429, 500, 503):
+                    break
+                if not attempt:
+                    time.sleep(3)  # Gemini busy or rate-limited: try once more
             except (requests.RequestException, ValueError, KeyError, IndexError) as e:
-                error = e
+                error = type(e).__name__
                 break
-        _logger.warning('Gemini call failed: %s', type(error).__name__)
+        _logger.warning('Gemini call failed: %s', error)
         return None
 
     @api.model
