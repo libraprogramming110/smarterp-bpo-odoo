@@ -13,9 +13,4 @@
         <field name="params" eval="{'what': 'AI grades call transcripts against a QA rubric.', 'where': 'This SmartERP menu.', 'date': 'Nov 21, 2026'}"/>
     </record>
 
-    <record id="action_placeholder_agent_attrition" model="ir.actions.client">
-        <field name="name">Agent Attrition</field>
-        <field name="tag">smarterp_bpo.placeholder</field>
-        <field name="params" eval="{'what': 'Attrition risk score per agent, with what-if inputs.', 'where': 'Employees (SmartERP tab on the employee form).', 'date': 'Nov 24, 2026'}"/>
-    </record>
 </odoo>

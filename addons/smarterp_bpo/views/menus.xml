@@ -11,5 +11,5 @@
     <menuitem id="menu_quality_assurance" name="Quality Assurance (AI)" parent="menu_smarterp_root"
               action="action_placeholder_quality_assurance" sequence="40"/>
     <menuitem id="menu_agent_attrition" name="Agent Attrition" parent="menu_smarterp_root"
-              action="action_placeholder_agent_attrition" sequence="50"/>
+              action="action_smarterp_agent_attrition" sequence="50"/>
 </odoo>

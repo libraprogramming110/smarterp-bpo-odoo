@@ -60,4 +60,30 @@
             </xpath>
         </field>
     </record>
+
+    <!-- SmartERP → Agent Attrition: every agent, highest risk first. -->
+    <record id="view_employee_list_smarterp_attrition" model="ir.ui.view">
+        <field name="name">hr.employee.list.smarterp.attrition</field>
+        <field name="model">hr.employee</field>
+        <field name="priority">99</field>
+        <field name="arch" type="xml">
+            <list string="Attrition Risk" default_order="smarterp_risk_score desc">
+                <field name="name"/>
+                <field name="job_id" optional="show"/>
+                <field name="department_id" optional="show"/>
+                <field name="smarterp_risk_score"/>
+                <field name="smarterp_risk_level" widget="badge"
+                       decoration-danger="smarterp_risk_level == 'high'"
+                       decoration-warning="smarterp_risk_level == 'medium'"
+                       decoration-success="smarterp_risk_level == 'low'"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_smarterp_agent_attrition" model="ir.actions.act_window">
+        <field name="name">Agent Attrition</field>
+        <field name="res_model">hr.employee</field>
+        <field name="view_mode">list,form</field>
+        <field name="view_id" ref="view_employee_list_smarterp_attrition"/>
+    </record>
 </odoo>
