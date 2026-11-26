@@ -53,7 +53,7 @@
         <field name="inherit_id" ref="hr.view_employee_filter"/>
         <field name="arch" type="xml">
             <xpath expr="//search" position="inside">
-                <group string="SmartERP">
+                <group>
                     <filter string="Risk Level" name="group_smarterp_risk_level"
                             context="{'group_by': 'smarterp_risk_level'}"/>
                 </group>
