@@ -121,7 +121,7 @@ class TestChurnPrediction(TransactionCase):
             client.action_smarterp_reanalyze()
         self.assertEqual(client.smarterp_reason_source, 'rules')
         self.assertLess(client.smarterp_sentiment, 0)
-        self.assertIn('Unknown: sentiment trend, seats trend.', client.smarterp_reason)
+        self.assertIn('Unknown: sentiment trend, seats trend, call quality.', client.smarterp_reason)
         self.assertTrue(client.smarterp_retention_action)
 
     def test_no_messages_never_calls_gemini(self):
@@ -138,6 +138,20 @@ class TestChurnPrediction(TransactionCase):
         steady = self._client(smarterp_contract_end=end, smarterp_previous_seats=100, smarterp_current_seats=100)
         self.assertEqual(dropped.smarterp_confidence, steady.smarterp_confidence)
         self.assertGreater(dropped.smarterp_churn_score, steady.smarterp_churn_score)
+
+    def test_poor_qa_calls_raise_risk(self):
+        end = self.today + timedelta(days=120)
+        no_calls = self._client(smarterp_contract_end=end)
+        poor_calls = self._client(smarterp_contract_end=end)
+        call = self.env['smarterp.qa.transcript'].create({
+            'name': 'CALL-1', 'partner_id': poor_calls.id, 'transcript': 'Customer: Hello?\nAgent: Bye.'})
+        # Gemini off and no scorecard keywords in the call: every criterion Missed, QA score 0.
+        with patch.object(self.ai_class, 'ask_gemini', return_value=None):
+            call.action_grade()
+        self.assertEqual(call.final_score, 0)
+        self.assertEqual(poor_calls.smarterp_qa_score, 0)
+        self.assertEqual(poor_calls.smarterp_confidence, no_calls.smarterp_confidence + 10)
+        self.assertGreater(poor_calls.smarterp_churn_score, no_calls.smarterp_churn_score)
 
     def test_non_client_is_not_scored(self):
         partner = self.env['res.partner'].create({'name': 'Supplier'})

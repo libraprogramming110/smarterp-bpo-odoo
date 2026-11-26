@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Scorecard: the criteria every call is graded on, edited in place. -->
+    <record id="view_smarterp_qa_criterion_list" model="ir.ui.view">
+        <field name="name">smarterp.qa.criterion.list</field>
+        <field name="model">smarterp.qa.criterion</field>
+        <field name="arch" type="xml">
+            <list string="Scorecard" editable="bottom">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="weight" sum="Total weight"/>
+                <field name="critical"/>
+                <field name="description"/>
+                <field name="keywords" optional="show"/>
+                <field name="active" widget="boolean_toggle"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_smarterp_qa_criteria" model="ir.actions.act_window">
+        <field name="name">Scorecard</field>
+        <field name="res_model">smarterp.qa.criterion</field>
+        <field name="view_mode">list</field>
+        <field name="context">{'active_test': False}</field>
+    </record>
+
+    <!-- Call Transcripts: newest first; grading only on a click, never on create or import. -->
+    <record id="view_smarterp_qa_transcript_list" model="ir.ui.view">
+        <field name="name">smarterp.qa.transcript.list</field>
+        <field name="model">smarterp.qa.transcript</field>
+        <field name="arch" type="xml">
+            <list string="Call Transcripts">
+                <field name="call_date"/>
+                <field name="name"/>
+                <field name="agent_id"/>
+                <field name="partner_id"/>
+                <field name="final_score"/>
+                <field name="outcome" widget="badge"
+                       decoration-success="outcome == 'pass'"
+                       decoration-danger="outcome == 'fail'"/>
+                <field name="auto_fail"/>
+                <field name="needs_review"/>
+                <field name="sentiment_shift" optional="hide"/>
+                <field name="grade_source" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_smarterp_qa_transcript_form" model="ir.ui.view">
+        <field name="name">smarterp.qa.transcript.form</field>
+        <field name="model">smarterp.qa.transcript</field>
+        <field name="arch" type="xml">
+            <form string="Call Transcript">
+                <header>
+                    <button name="action_grade" type="object" string="Grade with AI" class="btn-primary"
+                            invisible="not transcript"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="name" placeholder="e.g. CALL-0001"/></h1>
+                    </div>
+                    <group>
+                        <group string="Call">
+                            <field name="call_date"/>
+                            <field name="duration"/>
+                            <field name="agent_id"/>
+                            <field name="partner_id"/>
+                        </group>
+                        <group string="QA Score" invisible="not outcome">
+                            <field name="final_score"/>
+                            <field name="outcome" widget="badge"
+                                   decoration-success="outcome == 'pass'"
+                                   decoration-danger="outcome == 'fail'"/>
+                            <field name="auto_fail"/>
+                            <field name="ai_score"/>
+                            <field name="grade_source"/>
+                            <field name="needs_review"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Transcript" name="transcript">
+                            <field name="transcript" placeholder="Paste the call transcript here, one line per turn."/>
+                        </page>
+                        <page string="Scorecard Results" name="results" invisible="not outcome">
+                            <field name="result_ids" readonly="1">
+                                <list>
+                                    <field name="criterion_id"/>
+                                    <field name="weight"/>
+                                    <field name="critical"/>
+                                    <field name="rating" widget="badge"
+                                           decoration-success="rating == 'met'"
+                                           decoration-warning="rating == 'partial'"
+                                           decoration-danger="rating == 'missed'"/>
+                                    <field name="evidence"/>
+                                </list>
+                            </field>
+                            <group>
+                                <group string="Customer Sentiment">
+                                    <field name="sentiment_start" string="Start"/>
+                                    <field name="sentiment_end" string="End"/>
+                                    <field name="sentiment_shift" string="Shift"/>
+                                </group>
+                                <group string="Coaching">
+                                    <field name="coaching_note" nolabel="1" colspan="2"/>
+                                </group>
+                            </group>
+                        </page>
+                        <page string="Review" name="review">
+                            <group>
+                                <field name="reviewed"/>
+                                <field name="reviewer_id"/>
+                                <field name="override_score"/>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_smarterp_qa_transcript_search" model="ir.ui.view">
+        <field name="name">smarterp.qa.transcript.search</field>
+        <field name="model">smarterp.qa.transcript</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="agent_id"/>
+                <field name="partner_id"/>
+                <filter string="Fail" name="fail" domain="[('outcome', '=', 'fail')]"/>
+                <filter string="Needs review" name="needs_review" domain="[('needs_review', '=', True)]"/>
+                <filter string="Auto-fail" name="auto_fail" domain="[('auto_fail', '=', True)]"/>
+                <group>
+                    <filter string="Agent" name="group_agent" context="{'group_by': 'agent_id'}"/>
+                    <filter string="Client" name="group_client" context="{'group_by': 'partner_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_smarterp_qa_transcripts" model="ir.actions.act_window">
+        <field name="name">Call Transcripts</field>
+        <field name="res_model">smarterp.qa.transcript</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <!-- Action menu on the transcript list: grade the selected calls with Gemini. -->
+    <record id="action_smarterp_qa_grade_selected" model="ir.actions.server">
+        <field name="name">Grade selected (max 30)</field>
+        <field name="model_id" ref="model_smarterp_qa_transcript"/>
+        <field name="binding_model_id" ref="model_smarterp_qa_transcript"/>
+        <field name="binding_view_types">list</field>
+        <field name="state">code</field>
+        <field name="code">action = records.action_grade_selected()</field>
+    </record>
+</odoo>

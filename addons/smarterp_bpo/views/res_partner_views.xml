@@ -32,6 +32,8 @@
                             <field name="smarterp_risk_phrases" invisible="not smarterp_risk_phrases"/>
                             <field name="smarterp_complaint_count"/>
                             <field name="smarterp_last_client_message"/>
+                            <!-- Hidden until the client has a graded call in the last 90 days. -->
+                            <field name="smarterp_qa_score" invisible="not smarterp_qa_score"/>
                         </group>
                         <group string="Inputs">
                             <field name="smarterp_is_bpo_client"/>

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <!-- Default QA scorecard, loaded once: edit it under SmartERP → Quality Assurance (AI) → Scorecard. -->
+    <record id="qa_criterion_greeting" model="smarterp.qa.criterion">
+        <field name="sequence">10</field>
+        <field name="name">Greeting</field>
+        <field name="weight">10</field>
+        <field name="description">The agent greets the customer, thanks them for calling and gives their name.</field>
+        <field name="keywords">thank you for calling, thanks for calling, good morning, good afternoon, good evening, my name is</field>
+    </record>
+    <record id="qa_criterion_identity" model="smarterp.qa.criterion">
+        <field name="sequence">20</field>
+        <field name="name">Identity verification</field>
+        <field name="weight">15</field>
+        <field name="critical" eval="True"/>
+        <field name="description">Before discussing the account, the agent verifies the caller's identity (e.g. date of birth, account number or last four digits).</field>
+        <field name="keywords">verify, verification, date of birth, account number, last four, security question</field>
+    </record>
+    <record id="qa_criterion_understanding" model="smarterp.qa.criterion">
+        <field name="sequence">30</field>
+        <field name="name">Understanding the issue</field>
+        <field name="weight">15</field>
+        <field name="description">The agent asks questions and repeats the issue back to confirm they understood it.</field>
+        <field name="keywords">just to confirm, so you are saying, if i understand, can you tell me, let me make sure, what happened</field>
+    </record>
+    <record id="qa_criterion_empathy" model="smarterp.qa.criterion">
+        <field name="sequence">40</field>
+        <field name="name">Empathy &amp; tone</field>
+        <field name="weight">15</field>
+        <field name="description">The agent stays calm and polite and acknowledges the customer's feelings.</field>
+        <field name="keywords">i understand, i'm sorry, i am sorry, i apologize, sorry for the, frustrating, i can imagine</field>
+    </record>
+    <record id="qa_criterion_resolution" model="smarterp.qa.criterion">
+        <field name="sequence">50</field>
+        <field name="name">Resolution</field>
+        <field name="weight">25</field>
+        <field name="description">The agent solves the issue or gives a clear next step with a timeframe.</field>
+        <field name="keywords">resolved, fixed, refund has been, processed, has been updated, you will receive</field>
+    </record>
+    <record id="qa_criterion_compliance" model="smarterp.qa.criterion">
+        <field name="sequence">60</field>
+        <field name="name">Compliance disclosures</field>
+        <field name="weight">10</field>
+        <field name="critical" eval="True"/>
+        <field name="description">The agent tells the customer the call may be recorded for quality and training.</field>
+        <field name="keywords">this call may be recorded, recorded for quality, call is being recorded, monitored or recorded</field>
+    </record>
+    <record id="qa_criterion_closing" model="smarterp.qa.criterion">
+        <field name="sequence">70</field>
+        <field name="name">Closing</field>
+        <field name="weight">10</field>
+        <field name="description">The agent asks if there is anything else and closes the call politely.</field>
+        <field name="keywords">anything else, have a great day, have a nice day, thank you for your time, thanks for your patience</field>
+    </record>
+</odoo>

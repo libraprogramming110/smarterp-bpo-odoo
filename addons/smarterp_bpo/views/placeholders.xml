@@ -7,10 +7,4 @@
         <field name="params" eval="{'what': 'Forecasts call volume, works out staffing need and shows a basic shift grid.', 'where': 'This SmartERP menu.', 'date': 'Nov 22-23, 2026'}"/>
     </record>
 
-    <record id="action_placeholder_quality_assurance" model="ir.actions.client">
-        <field name="name">Quality Assurance (AI)</field>
-        <field name="tag">smarterp_bpo.placeholder</field>
-        <field name="params" eval="{'what': 'AI grades call transcripts against a QA rubric.', 'where': 'This SmartERP menu.', 'date': 'Nov 21, 2026'}"/>
-    </record>
-
 </odoo>

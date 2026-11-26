@@ -6,11 +6,14 @@
     'category': 'Sales/CRM',
     'depends': ['base', 'crm', 'contacts', 'hr', 'crm_iap_enrich'],
     'data': [
+        'security/ir.access.csv',
         'data/utm_source_data.xml',
+        'data/qa_criteria_data.xml',
         'views/placeholders.xml',
         'views/crm_lead_views.xml',
         'views/res_partner_views.xml',
         'views/hr_employee_views.xml',
+        'views/qa_views.xml',
         'views/menus.xml',
     ],
     'assets': {

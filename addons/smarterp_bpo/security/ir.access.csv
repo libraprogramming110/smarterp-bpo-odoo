@@ -1,0 +1,4 @@
+id,name,model_id,group_id/id,operation,domain
+access_smarterp_qa_criterion_user,QA Scorecard,smarterp.qa.criterion,base.group_user,crud,
+access_smarterp_qa_transcript_user,Call Transcripts,smarterp.qa.transcript,base.group_user,crud,
+access_smarterp_qa_result_user,QA Results,smarterp.qa.result,base.group_user,crud,

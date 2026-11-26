@@ -9,7 +9,7 @@ from odoo.tools import html2plaintext
 _logger = logging.getLogger(__name__)
 
 # Each risk signal is turned into 0..1 (1 = about to leave), or None when we don't know it yet.
-# Service quality (10) comes later with the QA feature, so these sum to 90 and confidence stays out of 100.
+# Weights sum to 100, so confidence is the known weight out of 100.
 # Unknown signals are left out of the raw score; the less we know, the closer the score stays to BASELINE_RISK.
 SCORE_WEIGHTS = {
     'sentiment': 20,     # client message sentiment over the last SENTIMENT_DAYS
@@ -19,6 +19,7 @@ SCORE_WEIGHTS = {
     'seats': 15,         # current vs previous seats, full at SEATS_DROP_FULL drop
     'renewal': 15,       # how soon the contract ends
     'silence': 5,        # days since the last client message, full at SILENCE_FULL
+    'quality': 10,       # average final QA score of the client's calls in the last QA_DAYS, 0 = full risk
 }
 BASELINE_RISK = 30
 SENTIMENT_DAYS = 90
@@ -30,6 +31,7 @@ SEATS_DROP_FULL = 0.4
 RENEWAL_FULL_DAYS = 90
 RENEWAL_HALF_DAYS = 180
 SILENCE_FULL = 60
+QA_DAYS = 90
 RED_FROM = 70
 YELLOW_FROM = 40
 HIGH_CONFIDENCE_FROM = 70
@@ -45,6 +47,7 @@ FACTOR_LABELS = {
     'seats': 'seats trend',
     'renewal': 'renewal window',
     'silence': 'silence',
+    'quality': 'call quality',
 }
 RETENTION_ACTIONS = {
     'sentiment': 'Call the client this week to hear their concerns and agree on fixes.',
@@ -54,6 +57,7 @@ RETENTION_ACTIONS = {
     'seats': 'Meet the client to understand the seat cuts and offer a right-sized plan.',
     'renewal': 'Start renewal talks now with a renewal offer.',
     'silence': 'Check in with the client: we have not heard from them in a while.',
+    'quality': 'Review the failed QA calls with the team lead and share a coaching plan with the client.',
     'green': 'Keep the regular check-ins and ask about growth or a referral.',
 }
 RISK_PHRASES = ['other vendor', 'another vendor', 'terminate', 'termination', 'rfp', 'cancel',
@@ -101,6 +105,9 @@ class ResPartner(models.Model):
     smarterp_complaint_count = fields.Integer('Complaints (90 days)', readonly=True)  # set by the analysis
     smarterp_last_client_message = fields.Datetime('Last Client Message', compute='_compute_smarterp_churn',
                                                    store=True)
+    # QA transcripts of this client: grading or reviewing one recomputes the churn score through the depends.
+    smarterp_qa_transcript_ids = fields.One2many('smarterp.qa.transcript', 'partner_id', 'QA Calls')
+    smarterp_qa_score = fields.Integer('Avg QA Score (90 days)', compute='_compute_smarterp_churn', store=True)
     smarterp_reason = fields.Text('Why this risk')
     smarterp_retention_action = fields.Text('Retention Action')
     smarterp_reason_source = fields.Selection([
@@ -123,9 +130,16 @@ class ResPartner(models.Model):
     def _smarterp_text(self, message):
         return html2plaintext(message.body or '').strip()
 
+    def _smarterp_qa_average(self):
+        """Average final QA score of graded calls in the last QA_DAYS, or None when there are none."""
+        since = fields.Date.today() - timedelta(days=QA_DAYS)
+        calls = self.smarterp_qa_transcript_ids.filtered(lambda t: t.outcome and t.call_date >= since)
+        return sum(calls.mapped('final_score')) / len(calls) if calls else None
+
     def _smarterp_signals(self):
         """Risk 0..1 per signal, or None when unknown."""
         self.ensure_one()
+        qa_average = self._smarterp_qa_average()
         sentiment = (1 - self.smarterp_sentiment) / 2 if self.smarterp_risk_phrases else None
         seats = None
         if self.smarterp_previous_seats > 0:
@@ -145,6 +159,7 @@ class ResPartner(models.Model):
             'seats': seats,
             'renewal': renewal,
             'silence': min((fields.Datetime.now() - last).days / SILENCE_FULL, 1) if last else None,
+            'quality': (100 - qa_average) / 100 if qa_average is not None else None,
         }
 
     def _smarterp_raw_and_confidence(self):
@@ -160,14 +175,18 @@ class ResPartner(models.Model):
     # Messages are not in depends: _message_post_after_hook below recomputes when an email lands.
     @api.depends('smarterp_is_bpo_client', 'smarterp_contract_end', 'smarterp_current_seats',
                  'smarterp_previous_seats', 'smarterp_sentiment', 'smarterp_sentiment_trend',
-                 'smarterp_risk_phrases', 'smarterp_complaint_count')
+                 'smarterp_risk_phrases', 'smarterp_complaint_count',
+                 'smarterp_qa_transcript_ids.final_score', 'smarterp_qa_transcript_ids.outcome',
+                 'smarterp_qa_transcript_ids.call_date')
     def _compute_smarterp_churn(self):
         for partner in self:
             if not partner.smarterp_is_bpo_client:
                 partner.update({'smarterp_churn_score': 0, 'smarterp_health': False, 'smarterp_confidence': 0,
-                                'smarterp_confidence_level': False, 'smarterp_last_client_message': False})
+                                'smarterp_confidence_level': False, 'smarterp_last_client_message': False,
+                                'smarterp_qa_score': 0})
                 continue
             partner.smarterp_last_client_message = partner._smarterp_client_messages()[:1].date
+            partner.smarterp_qa_score = round(partner._smarterp_qa_average() or 0)
             raw, confidence = partner._smarterp_raw_and_confidence()
             score = round(confidence / 100 * raw + (1 - confidence / 100) * BASELINE_RISK)
             partner.smarterp_churn_score = score
